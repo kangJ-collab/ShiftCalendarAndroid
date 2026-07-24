@@ -1,0 +1,8 @@
+<resources>
+    <color name="app_surface">#FFFFFF</color>
+    <color name="app_background">#F3F4F5</color>
+    <color name="app_accent">#315D73</color>
+    <color name="alarm_background">#101518</color>
+    <color name="alarm_text">#F4F7F8</color>
+    <color name="alarm_muted">#B5C0C6</color>
+</resources>

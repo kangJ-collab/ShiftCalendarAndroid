@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/alarm_background"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="28dp">
+
+    <TextView
+        android:id="@+id/alarmDate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/alarm_muted"
+        android:textSize="17sp" />
+
+    <TextView
+        android:id="@+id/alarmShift"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:gravity="center"
+        android:textColor="@color/alarm_text"
+        android:textSize="42sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/alarmMessage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:gravity="center"
+        android:text="설정한 기상 시각입니다."
+        android:textColor="@color/alarm_muted"
+        android:textSize="16sp" />
+
+    <Button
+        android:id="@+id/stopAlarmButton"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginTop="52dp"
+        android:backgroundTint="#E8EFF2"
+        android:text="@string/stop_alarm"
+        android:textColor="#183342"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+</LinearLayout>

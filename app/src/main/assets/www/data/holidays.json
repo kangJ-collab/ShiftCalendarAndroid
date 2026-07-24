@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 2,
+  "version": "waiting-for-api",
+  "updatedAt": null,
+  "holidays": {},
+  "majorDays": [],
+  "customHolidays": [
+    {"id":"union-foundation","name":"노동조합 창립기념일","month":2,"day":3,"annual":true,"enabled":true,"payAsHoliday":true,"editable":true},
+    {"id":"company-foundation","name":"회사 창립기념일","month":8,"day":2,"annual":true,"enabled":true,"payAsHoliday":true,"editable":true}
+  ],
+  "sourceName": "한국천문연구원 특일 정보 API"
+}
