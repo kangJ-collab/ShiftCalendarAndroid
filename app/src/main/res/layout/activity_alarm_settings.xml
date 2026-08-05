@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F3F4F5">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="12dp"
+        android:background="#FFFFFF">
+
+        <Button
+            android:id="@+id/alarmCloseButton"
+            android:layout_width="56dp"
+            android:layout_height="48dp"
+            android:text="닫기"
+            android:textAllCaps="false" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="근무별 기상 알람"
+            android:textColor="#202428"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/alarmPermissionButton"
+            android:layout_width="72dp"
+            android:layout_height="48dp"
+            android:text="권한"
+            android:textAllCaps="false" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp"
+        android:text="근무 시작 몇 분 전이 아니라, 실제로 일어날 시각을 직접 여러 개 등록합니다. 예: 주간 05:10 · 05:20 · 05:30"
+        android:textColor="#58636B"
+        android:textSize="13sp" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <LinearLayout
+            android:id="@+id/alarmSettingsList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="14dp" />
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:gravity="center"
+        android:padding="10dp"
+        android:background="#FFFFFF">
+        <Button
+            android:id="@+id/alarmTestButton"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            android:text="10초 테스트"
+            android:textAllCaps="false" />
+        <Button
+            android:id="@+id/alarmSaveButton"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="저장 및 다시 예약"
+            android:textAllCaps="false" />
+    </LinearLayout>
+</LinearLayout>

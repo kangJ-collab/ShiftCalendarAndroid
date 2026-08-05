@@ -1,101 +1,56 @@
-# 교대달력 Android
+# ShiftCalendarAndroid v1.2.0
 
-기존 `index.html` 기반 교대달력을 Android WebView 앱으로 패키징하고, Android 네이티브 근무 알람을 연결한 프로젝트입니다.
+`kangJ-collab/shiftcalendar`의 최신 웹 교대달력을 Android 앱으로 실행하고, Android 네이티브 알람과 홈 화면 위젯을 제공하는 프로젝트입니다.
 
-## 포함된 기능
+## 최신 웹앱 자동 반영
 
-- 기존 교대달력 HTML/CSS/JavaScript 유지
-- 주간·야간·각 OT·일근·교육·출장별 개별 기상 시각 설정
-- 근무 종류마다 알람 사용 여부 개별 설정
-- 향후 120일 근무표를 계산해 날짜별 정확한 알람 예약
-- 조 변경, 일근 기간, 날짜별 근무 변경 시 알람 자동 재예약
-- 휴대폰 재부팅·시간대 변경·앱 업데이트 후 알람 재예약
-- 잠금화면 전체 알람 화면
-- 기본 알람음 반복 재생 및 진동
-- 알람 끄기 버튼
-- 10초 뒤 테스트 알람
-- Android 앱에서 JSON 백업을 `다운로드/교대달력` 폴더에 저장
-- JSON 백업 파일 불러오기 지원
+Android 앱은 실행 시 아래 주소의 최신 웹앱을 불러옵니다.
 
-## 알람 UX
+- `https://kangj-collab.github.io/shiftcalendar/`
 
-`설정 → 근무 알람`에서 직접 지정합니다.
+따라서 웹 저장소가 업데이트되면 이미 설치된 Android 앱도 다음 실행부터 최신 화면을 사용합니다.
 
-예시:
+GitHub Actions는 30분마다 원본 저장소 전체를 다시 받아 `app/src/main/assets/www/`에 복사한 후 APK를 빌드합니다. 원본에 새 폴더나 파일이 추가돼도 별도 목록 수정 없이 자동 포함됩니다.
 
-- 주간: 05:30
-- 야간: 15:30
-- 주OT: 05:20
-- 야+반OT: 13:30
-- 일근08~17: 06:20
+## 포함 기능
 
-알람은 `근무 시작 몇 분 전`을 계산하지 않습니다. 각 근무일 당일에 사용자가 입력한 시각에 울립니다.
+- 최신 웹 교대달력 실행
+- 인터넷 연결 실패 시 APK 내 오프라인 복사본 사용
+- 근무 종류마다 여러 기상 알람 추가·수정·삭제
+- 재부팅·시간대 변경·앱 업데이트 후 알람 재예약
+- 2×2 오늘 근무 위젯
+- 4×2 오늘·내일 근무 위젯
+- 4×4 월간 근무 달력 위젯
+- GitHub Actions APK 자동 빌드
 
-## Android Studio에서 실행
+## GitHub 업로드
 
-1. Android Studio에서 이 폴더를 엽니다.
-2. Gradle 동기화를 진행합니다.
-3. Android SDK 37과 Build Tools 36.0.0 설치 요청이 나오면 설치합니다.
-4. USB 디버깅을 켠 Android 휴대폰을 연결합니다.
-5. 상단의 Run 버튼을 누릅니다.
-
-프로젝트 기준:
-
-- Android Gradle Plugin 9.3.0
-- Gradle 9.5.0
-- JDK 17
-- compileSdk / targetSdk 37
-- minSdk 26
-
-## APK 만들기
-
-테스트 APK:
+ZIP을 푼 뒤 이 폴더 안의 다음 항목을 저장소 최상단에 업로드합니다.
 
 ```text
-Build → Build APK(s)
+.github/
+app/
+build.gradle
+gradle.properties
+settings.gradle
+README.md
+.gitignore
 ```
 
-직접 배포용 서명 APK:
+폴더 전체를 한 단계 더 중첩해 올리면 안 됩니다.
 
-```text
-Build → Generate Signed App Bundle or APK
-→ APK
-→ Create new keystore
-→ release
-```
+## APK 받기
 
-서명키 파일과 비밀번호는 잃어버리면 기존 앱을 업데이트할 수 없으므로 반드시 별도 백업하세요.
+1. 저장소의 `Actions` 탭을 엽니다.
+2. `Build Android APK` 작업이 초록색으로 완료될 때까지 기다립니다.
+3. 실행 결과 아래 `Artifacts`의 `ShiftCalendarAndroid-v1.2.0`을 다운로드합니다.
+4. ZIP을 풀어 `ShiftCalendarAndroid-v1.2.0-debug.apk`를 설치합니다.
 
-## APK 직접 배포
+## 웹 원본이 업데이트될 때
 
-생성된 `app-release.apk`를 GitHub Releases 또는 본인 홈페이지에 올리면 됩니다. 사용자는 최초 설치 시 브라우저의 `알 수 없는 앱 설치 허용`을 승인해야 합니다.
+별도 Android 코드 수정은 필요하지 않습니다.
 
-## 권한
+- 설치된 앱 화면: 다음 실행부터 온라인 최신본 적용
+- 새 오프라인 포함 APK: 최대 약 30분 뒤 Actions에서 자동 생성
 
-앱 최초 설정에서 다음 상태를 확인합니다.
-
-- 알림 권한
-- 정확한 알람 권한
-- 잠금화면 전체 알람 표시 권한
-
-Android 13 이상에서는 알림 권한을 직접 승인해야 합니다. 잠금화면 전체 표시가 제한돼도 포그라운드 알람 서비스가 알람음과 진동을 실행하도록 구성했습니다.
-
-## 파일 위치
-
-- 웹앱: `app/src/main/assets/www/index.html`
-- Android 메인 화면: `MainActivity.java`
-- JavaScript 연결: `AndroidAlarmBridge.java`
-- 알람 예약: `AlarmScheduler.java`
-- 알람 수신: `AlarmReceiver.java`
-- 알람음 서비스: `AlarmRingingService.java`
-- 잠금화면 알람: `AlarmActivity.java`
-
-## 주의
-
-현재 첨부된 파일에는 GAS 설정 안내용 원본 이미지 3개가 포함되지 않아 자리표시 이미지가 들어 있습니다. 기존 프로젝트의 아래 파일로 교체하면 됩니다.
-
-```text
-app/src/main/assets/www/assets/gas-auth-1.png
-app/src/main/assets/www/assets/gas-auth-2.png
-app/src/main/assets/www/assets/gas-auth-3.png
-```
+`repository_dispatch` 이벤트 `shiftcalendar-web-updated`도 지원하므로, 나중에 저장소 간 토큰을 설정하면 웹 커밋 직후 즉시 빌드하도록 확장할 수 있습니다.

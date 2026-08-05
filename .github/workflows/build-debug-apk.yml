@@ -4,33 +4,84 @@ on:
   workflow_dispatch:
   push:
     branches: [ main ]
+  schedule:
+    # GitHub Actions uses UTC. 30분마다 최신 웹 저장소를 다시 받아 APK를 만듭니다.
+    - cron: '7,37 * * * *'
+  repository_dispatch:
+    types: [shiftcalendar-web-updated]
+
+concurrency:
+  group: shiftcalendar-android-build
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+    steps:
+      - name: Checkout Android project
+        uses: actions/checkout@v4
+
+      - name: Download latest shiftcalendar web app
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/shiftcalendar-web
+          git clone --depth 1 https://github.com/kangJ-collab/shiftcalendar.git /tmp/shiftcalendar-web
+
+          SOURCE_SHA="$(git -C /tmp/shiftcalendar-web rev-parse HEAD)"
+          echo "Latest web source: $SOURCE_SHA"
+
+          rm -rf app/src/main/assets/www
+          mkdir -p app/src/main/assets/www
+
+          # 원본 웹 저장소의 새 파일/폴더가 추가돼도 자동으로 모두 포함합니다.
+          rsync -a --delete \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.gitignore' \
+            --exclude='README*' \
+            --exclude='LICENSE*' \
+            /tmp/shiftcalendar-web/ app/src/main/assets/www/
+
+          printf '%s\n' "$SOURCE_SHA" > app/src/main/assets/www/.source-commit
+
+          test -f app/src/main/assets/www/index.html
+          echo "Synced files:"
+          find app/src/main/assets/www -maxdepth 2 -type f | sort
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK
+      - name: Install Android SDK packages
+        shell: bash
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
-      - uses: gradle/actions/setup-gradle@v4
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '9.5.0'
+          gradle-version: '8.10.2'
 
       - name: Build debug APK
-        run: gradle :app:assembleDebug
+        run: gradle :app:assembleDebug --stacktrace
 
-      - uses: actions/upload-artifact@v4
+      - name: Rename APK
+        shell: bash
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk \
+            app/build/outputs/apk/debug/ShiftCalendarAndroid-v1.2.0-debug.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
-          name: shiftcalendar-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: ShiftCalendarAndroid-v1.2.0
+          path: app/build/outputs/apk/debug/ShiftCalendarAndroid-v1.2.0-debug.apk
+          retention-days: 30

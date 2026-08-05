@@ -17,6 +17,8 @@ import android.widget.Toast;
 
 import org.json.JSONObject;
 
+import com.kangj.shiftcalendar.widget.WidgetUpdater;
+
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
@@ -26,6 +28,32 @@ public class AndroidAlarmBridge {
 
     AndroidAlarmBridge(MainActivity activity) {
         this.activity = activity;
+    }
+
+    @JavascriptInterface
+    public void openAlarmSettings() {
+        activity.runOnUiThread(activity::openAlarmSettings);
+    }
+
+    @JavascriptInterface
+    public String syncSchedule(String scheduleJson) {
+        try {
+            ScheduleStore.saveSchedule(activity, scheduleJson);
+            AlarmSettingsStore.rescheduleAll(activity);
+            WidgetUpdater.updateAll(activity);
+            return result(true, "ok");
+        } catch (Exception error) {
+            return result(false, error.getMessage());
+        }
+    }
+
+    private static String result(boolean ok, String message) {
+        JSONObject value = new JSONObject();
+        try {
+            value.put("ok", ok);
+            value.put("message", message == null ? "" : message);
+        } catch (Exception ignored) {}
+        return value.toString();
     }
 
     @JavascriptInterface

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widgetNextRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center_vertical"
+    android:padding="16dp"
+    android:background="@drawable/bg_widget">
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="교대달력" android:textColor="#68727A" android:textSize="12sp" />
+    <TextView android:id="@+id/widgetNextToday" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textColor="#202428" android:textSize="20sp" android:textStyle="bold" />
+    <TextView android:id="@+id/widgetNextTomorrow" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:textColor="#58636B" android:textSize="17sp" />
+</LinearLayout>
