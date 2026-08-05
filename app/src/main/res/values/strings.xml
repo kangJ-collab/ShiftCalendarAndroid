@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">교대달력</string>
-    <string name="alarm_channel_name">근무 알람</string>
-    <string name="alarm_channel_description">교대 근무 기상 알람</string>
-    <string name="stop_alarm">알람 끄기</string>
+    <string name="widget_today_description">오늘 근무를 표시합니다.</string>
+    <string name="widget_next_description">오늘과 내일 근무를 표시합니다.</string>
+    <string name="widget_calendar_description">현재 월의 근무 달력을 표시합니다.</string>
 </resources>

@@ -4,9 +4,12 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
+import com.kangj.shiftcalendar.widget.WidgetUpdater;
+
 public class SystemEventReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
-        AlarmScheduler.rescheduleStored(context);
+        AlarmSettingsStore.rescheduleAll(context);
+        WidgetUpdater.updateAll(context);
     }
 }
