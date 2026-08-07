@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/alarmSettingsRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -45,10 +46,55 @@
         android:textColor="#58636B"
         android:textSize="13sp" />
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="14dp"
+        android:paddingBottom="10dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="알람 방식"
+            android:textColor="#202428"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <RadioGroup
+            android:id="@+id/alarmModeGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/alarmModeSoundVibrate"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="소리+진동" />
+
+            <RadioButton
+                android:id="@+id/alarmModeSound"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="소리만" />
+
+            <RadioButton
+                android:id="@+id/alarmModeVibrate"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="진동만" />
+        </RadioGroup>
+    </LinearLayout>
+
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
+
         <LinearLayout
             android:id="@+id/alarmSettingsList"
             android:layout_width="match_parent"
@@ -63,6 +109,7 @@
         android:gravity="center"
         android:padding="10dp"
         android:background="#FFFFFF">
+
         <Button
             android:id="@+id/alarmTestButton"
             android:layout_width="0dp"
@@ -70,6 +117,7 @@
             android:layout_weight="1"
             android:text="10초 테스트"
             android:textAllCaps="false" />
+
         <Button
             android:id="@+id/alarmSaveButton"
             android:layout_width="0dp"
