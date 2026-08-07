@@ -156,7 +156,7 @@ public class MainActivity extends Activity {
             "b.id='androidNativeAlarmFab';b.type='button';b.textContent='알람';" +
             "b.setAttribute('aria-label','근무 알람 설정');" +
             "b.style.cssText='position:fixed;right:14px;bottom:82px;z-index:20000;border:0;border-radius:999px;padding:11px 15px;background:#315d73;color:#fff;font-weight:800;box-shadow:0 4px 14px rgba(0,0,0,.24)';" +
-            "b.onclick=function(){try{AndroidAlarm.openAlarmSettings()}catch(e){alert(\\'알람 설정을 열 수 없습니다.\\')}};" +
+            "b.onclick=function(){try{AndroidAlarm.openAlarmSettings()}catch(e){alert('알람 설정을 열 수 없습니다.')}};" +
             "document.body.appendChild(b);" +
             "})();";
         webView.evaluateJavascript(script, null);
