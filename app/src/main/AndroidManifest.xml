@@ -20,9 +20,7 @@
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="false">
 
-        <activity
-            android:name=".AlarmSettingsActivity"
-            android:exported="false" />
+        <activity android:name=".AlarmSettingsActivity" android:exported="false" />
 
         <activity
             android:name=".AlarmActivity"
@@ -60,17 +58,40 @@
             </intent-filter>
         </receiver>
 
-        <receiver android:name=".widget.TodayWidgetProvider" android:exported="false">
-            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_today_info" />
+        <receiver
+            android:name=".widget.TodayWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_today_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_today_info" />
         </receiver>
-        <receiver android:name=".widget.NextWidgetProvider" android:exported="false">
-            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_next_info" />
+
+        <receiver
+            android:name=".widget.NextWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_next_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_next_info" />
         </receiver>
-        <receiver android:name=".widget.CalendarWidgetProvider" android:exported="false">
-            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_calendar_info" />
+
+        <receiver
+            android:name=".widget.CalendarWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_calendar_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_calendar_info" />
         </receiver>
     </application>
 </manifest>
