@@ -23,7 +23,7 @@ import android.provider.Settings;
 public class AlarmRingingService extends Service {
     static final String ACTION_START = "com.kangj.shiftcalendar.action.START_ALARM";
     static final String ACTION_STOP = "com.kangj.shiftcalendar.action.STOP_ALARM";
-    private static final String CHANNEL_ID = "shift_alarm_channel_v1";
+    private static final String CHANNEL_ID = "shift_alarm_channel_v2";
     private static final int NOTIFICATION_ID = 7001;
     private static final long MAX_RING_MILLIS = 10 * 60 * 1_000L;
 
@@ -49,7 +49,12 @@ public class AlarmRingingService extends Service {
         Intent source = intent == null ? new Intent() : intent;
         Notification notification = buildNotification(source);
         startForeground(NOTIFICATION_ID, notification);
-        startRinging();
+
+        String mode = source.getStringExtra("alarmMode");
+        if (mode == null || mode.isEmpty()) {
+            mode = AlarmSettingsStore.MODE_SOUND_VIBRATE;
+        }
+        startRinging(mode);
 
         handler.removeCallbacks(autoStopRunnable);
         handler.postDelayed(autoStopRunnable, MAX_RING_MILLIS);
@@ -130,11 +135,16 @@ public class AlarmRingingService extends Service {
         manager.createNotificationChannel(channel);
     }
 
-    private void startRinging() {
+    private void startRinging(String mode) {
         stopRinging();
         acquireWakeLock();
-        startAlarmSound();
-        startVibration();
+
+        if (!AlarmSettingsStore.MODE_VIBRATE.equals(mode)) {
+            startAlarmSound();
+        }
+        if (!AlarmSettingsStore.MODE_SOUND.equals(mode)) {
+            startVibration();
+        }
     }
 
     private void startAlarmSound() {
@@ -158,8 +168,7 @@ public class AlarmRingingService extends Service {
             mediaPlayer.setLooping(true);
             mediaPlayer.prepare();
             mediaPlayer.start();
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) {}
     }
 
     private void startVibration() {
@@ -189,8 +198,7 @@ public class AlarmRingingService extends Service {
         if (mediaPlayer != null) {
             try {
                 if (mediaPlayer.isPlaying()) mediaPlayer.stop();
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) {}
             mediaPlayer.release();
             mediaPlayer = null;
         }

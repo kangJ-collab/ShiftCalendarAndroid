@@ -5,10 +5,12 @@ import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowInsets;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -33,6 +35,8 @@ public class MainActivity extends Activity {
         try {
             configureSystemBars();
             setContentView(R.layout.activity_main);
+            applyAndroid15Insets(findViewById(R.id.mainRoot));
+
             webView = findViewById(R.id.webView);
             configureWebView();
             webView.addJavascriptInterface(new AndroidAlarmBridge(this), "AndroidAlarm");
@@ -48,11 +52,36 @@ public class MainActivity extends Activity {
         Window window = getWindow();
         window.setStatusBarColor(Color.WHITE);
         window.setNavigationBarColor(Color.WHITE);
+
         int flags = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-        if (android.os.Build.VERSION.SDK_INT >= 26) {
+        if (Build.VERSION.SDK_INT >= 26) {
             flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
         }
         window.getDecorView().setSystemUiVisibility(flags);
+    }
+
+    private void applyAndroid15Insets(View root) {
+        if (root == null || Build.VERSION.SDK_INT < 35) return;
+
+        final int baseLeft = root.getPaddingLeft();
+        final int baseTop = root.getPaddingTop();
+        final int baseRight = root.getPaddingRight();
+        final int baseBottom = root.getPaddingBottom();
+
+        root.setOnApplyWindowInsetsListener((view, insets) -> {
+            android.graphics.Insets safeInsets = insets.getInsets(
+                WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout()
+            );
+
+            view.setPadding(
+                baseLeft + safeInsets.left,
+                baseTop + safeInsets.top,
+                baseRight + safeInsets.right,
+                baseBottom + safeInsets.bottom
+            );
+            return insets;
+        });
+        root.requestApplyInsets();
     }
 
     @SuppressWarnings("deprecation")
@@ -126,8 +155,8 @@ public class MainActivity extends Activity {
             "var b=document.createElement('button');" +
             "b.id='androidNativeAlarmFab';b.type='button';b.textContent='알람';" +
             "b.setAttribute('aria-label','근무 알람 설정');" +
-            "b.style.cssText='position:fixed;right:14px;bottom:calc(82px + env(safe-area-inset-bottom));z-index:20000;border:0;border-radius:999px;padding:11px 15px;background:#315d73;color:#fff;font-weight:800;box-shadow:0 4px 14px rgba(0,0,0,.24)';" +
-            "b.onclick=function(){try{AndroidAlarm.openAlarmSettings()}catch(e){alert(\'알람 설정을 열 수 없습니다.\')}};" +
+            "b.style.cssText='position:fixed;right:14px;bottom:82px;z-index:20000;border:0;border-radius:999px;padding:11px 15px;background:#315d73;color:#fff;font-weight:800;box-shadow:0 4px 14px rgba(0,0,0,.24)';" +
+            "b.onclick=function(){try{AndroidAlarm.openAlarmSettings()}catch(e){alert(\\'알람 설정을 열 수 없습니다.\\')}};" +
             "document.body.appendChild(b);" +
             "})();";
         webView.evaluateJavascript(script, null);
@@ -172,7 +201,10 @@ public class MainActivity extends Activity {
 
     void notifyPermissionStateChanged() {
         if (webView == null) return;
-        webView.evaluateJavascript("window.onAndroidAlarmPermissionChanged&&window.onAndroidAlarmPermissionChanged();", null);
+        webView.evaluateJavascript(
+            "window.onAndroidAlarmPermissionChanged&&window.onAndroidAlarmPermissionChanged();",
+            null
+        );
     }
 
     void openAppSettings() {

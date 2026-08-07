@@ -22,7 +22,12 @@ import java.util.Map;
 public final class AlarmSettingsStore {
     private static final String PREFS = "shiftcalendar_native";
     private static final String KEY = "multi_alarm_settings_v2";
+    private static final String KEY_MODE = "alarm_mode_v1";
     private static final DateTimeFormatter DATE = DateTimeFormatter.ISO_LOCAL_DATE;
+
+    public static final String MODE_SOUND_VIBRATE = "sound_vibrate";
+    public static final String MODE_SOUND = "sound";
+    public static final String MODE_VIBRATE = "vibrate";
 
     public static final List<String> DEFAULT_SHIFTS = Arrays.asList(
         "주간", "야간", "주OT", "야OT", "주+반OT", "야+반OT", "주8OT", "야8OT",
@@ -30,6 +35,23 @@ public final class AlarmSettingsStore {
     );
 
     private AlarmSettingsStore() {}
+
+    public static String loadMode(Context context) {
+        String mode = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_MODE, MODE_SOUND_VIBRATE);
+        if (MODE_SOUND.equals(mode) || MODE_VIBRATE.equals(mode)) return mode;
+        return MODE_SOUND_VIBRATE;
+    }
+
+    public static void saveMode(Context context, String mode) {
+        String safeMode = MODE_SOUND.equals(mode) || MODE_VIBRATE.equals(mode)
+            ? mode
+            : MODE_SOUND_VIBRATE;
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_MODE, safeMode)
+            .apply();
+    }
 
     public static Map<String, List<String>> load(Context context) {
         Map<String, List<String>> result = new LinkedHashMap<>();
@@ -72,13 +94,17 @@ public final class AlarmSettingsStore {
                 object.put(entry.getKey(), array);
             }
         } catch (Exception ignored) {}
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, object.toString()).apply();
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY, object.toString())
+            .apply();
         rescheduleAll(context);
     }
 
     public static void rescheduleAll(Context context) {
         try {
-            if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return;
+            if (Build.VERSION.SDK_INT >= 33 &&
+                context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return;
             AlarmManager manager = context.getSystemService(AlarmManager.class);
             if (Build.VERSION.SDK_INT >= 31 && (manager == null || !manager.canScheduleExactAlarms())) return;
 
@@ -86,6 +112,7 @@ public final class AlarmSettingsStore {
             Map<String, String> schedule = ScheduleStore.asMap(context);
             JSONArray alarms = new JSONArray();
             long now = System.currentTimeMillis();
+            String mode = loadMode(context);
 
             for (Map.Entry<String, String> day : schedule.entrySet()) {
                 List<String> times = settings.get(day.getValue());
@@ -97,6 +124,7 @@ public final class AlarmSettingsStore {
                     LocalDateTime local = date.atTime(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
                     long trigger = local.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
                     if (trigger <= now + 1500) continue;
+
                     JSONObject alarm = new JSONObject();
                     alarm.put("id", stableId(day.getKey() + "|" + day.getValue() + "|" + time + "|" + index));
                     alarm.put("triggerAt", trigger);
@@ -104,6 +132,7 @@ public final class AlarmSettingsStore {
                     alarm.put("body", day.getKey() + " " + time + " 기상 알람입니다.");
                     alarm.put("shiftType", day.getValue());
                     alarm.put("workDate", day.getKey());
+                    alarm.put("alarmMode", mode);
                     alarms.put(alarm);
                 }
             }

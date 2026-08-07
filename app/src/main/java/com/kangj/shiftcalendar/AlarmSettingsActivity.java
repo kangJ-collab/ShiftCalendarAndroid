@@ -12,9 +12,10 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
+import android.view.WindowInsets;
 import android.widget.Button;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -26,19 +27,66 @@ import java.util.Map;
 public class AlarmSettingsActivity extends Activity {
     private final Map<String, List<String>> values = new LinkedHashMap<>();
     private LinearLayout listContainer;
+    private RadioGroup modeGroup;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_alarm_settings);
+        applyAndroid15Insets(findViewById(R.id.alarmSettingsRoot));
+
         listContainer = findViewById(R.id.alarmSettingsList);
+        modeGroup = findViewById(R.id.alarmModeGroup);
 
         values.putAll(AlarmSettingsStore.load(this));
+        restoreMode();
+
         findViewById(R.id.alarmPermissionButton).setOnClickListener(v -> requestRequiredPermissions());
         findViewById(R.id.alarmSaveButton).setOnClickListener(v -> save());
         findViewById(R.id.alarmCloseButton).setOnClickListener(v -> finish());
         findViewById(R.id.alarmTestButton).setOnClickListener(v -> testAlarm());
         render();
+    }
+
+    private void applyAndroid15Insets(View root) {
+        if (root == null || Build.VERSION.SDK_INT < 35) return;
+
+        final int baseLeft = root.getPaddingLeft();
+        final int baseTop = root.getPaddingTop();
+        final int baseRight = root.getPaddingRight();
+        final int baseBottom = root.getPaddingBottom();
+
+        root.setOnApplyWindowInsetsListener((view, insets) -> {
+            android.graphics.Insets safeInsets = insets.getInsets(
+                WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout()
+            );
+            view.setPadding(
+                baseLeft + safeInsets.left,
+                baseTop + safeInsets.top,
+                baseRight + safeInsets.right,
+                baseBottom + safeInsets.bottom
+            );
+            return insets;
+        });
+        root.requestApplyInsets();
+    }
+
+    private void restoreMode() {
+        String mode = AlarmSettingsStore.loadMode(this);
+        if (AlarmSettingsStore.MODE_SOUND.equals(mode)) {
+            modeGroup.check(R.id.alarmModeSound);
+        } else if (AlarmSettingsStore.MODE_VIBRATE.equals(mode)) {
+            modeGroup.check(R.id.alarmModeVibrate);
+        } else {
+            modeGroup.check(R.id.alarmModeSoundVibrate);
+        }
+    }
+
+    private String selectedMode() {
+        int checkedId = modeGroup.getCheckedRadioButtonId();
+        if (checkedId == R.id.alarmModeSound) return AlarmSettingsStore.MODE_SOUND;
+        if (checkedId == R.id.alarmModeVibrate) return AlarmSettingsStore.MODE_VIBRATE;
+        return AlarmSettingsStore.MODE_SOUND_VIBRATE;
     }
 
     private void render() {
@@ -105,7 +153,8 @@ public class AlarmSettingsActivity extends Activity {
             add.setAllCaps(false);
             add.setOnClickListener(v -> addTime(entry.getKey()));
             card.addView(add, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(48)
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(48)
             ));
             listContainer.addView(card);
         }
@@ -138,23 +187,36 @@ public class AlarmSettingsActivity extends Activity {
     }
 
     private void save() {
+        AlarmSettingsStore.saveMode(this, selectedMode());
         AlarmSettingsStore.save(this, values);
         com.kangj.shiftcalendar.widget.WidgetUpdater.updateAll(this);
-        Toast.makeText(this, "근무별 알람을 저장하고 다시 예약했습니다.", Toast.LENGTH_LONG).show();
+        Toast.makeText(
+            this,
+            "알람 방식과 근무별 알람을 저장하고 다시 예약했습니다.",
+            Toast.LENGTH_LONG
+        ).show();
     }
 
     private void testAlarm() {
         requestRequiredPermissions();
+        AlarmSettingsStore.saveMode(this, selectedMode());
         try {
             String result = AlarmScheduler.scheduleTest(this, System.currentTimeMillis() + 10_000L);
-            Toast.makeText(this, result.contains("\"ok\":true") ? "10초 뒤 테스트 알람이 울립니다." : "권한을 확인해주세요.", Toast.LENGTH_LONG).show();
+            Toast.makeText(
+                this,
+                result.contains("\"ok\":true")
+                    ? "10초 뒤 선택한 방식으로 테스트 알람이 울립니다."
+                    : "권한을 확인해주세요.",
+                Toast.LENGTH_LONG
+            ).show();
         } catch (Exception error) {
             Toast.makeText(this, "테스트 알람을 예약하지 못했습니다.", Toast.LENGTH_LONG).show();
         }
     }
 
     private void requestRequiredPermissions() {
-        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 7001);
         }
         if (Build.VERSION.SDK_INT >= 31) {

@@ -16,8 +16,7 @@ final class AlarmScheduler {
     private static final int MAX_ALARMS = 180;
     private static final int TEST_ALARM_ID = 2_147_000_001;
 
-    private AlarmScheduler() {
-    }
+    private AlarmScheduler() {}
 
     static String replaceAlarms(Context context, String alarmsJson) {
         try {
@@ -54,9 +53,10 @@ final class AlarmScheduler {
             item.put("id", TEST_ALARM_ID);
             item.put("triggerAt", triggerAtMillis);
             item.put("title", "교대달력 알람 테스트");
-            item.put("body", "알람 소리와 잠금화면 표시를 확인하세요.");
+            item.put("body", "선택한 소리·진동 방식과 잠금화면 표시를 확인하세요.");
             item.put("shiftType", "테스트");
             item.put("workDate", "");
+            item.put("alarmMode", AlarmSettingsStore.loadMode(context));
             scheduleOne(context, item);
             return resultJson(true, "test_scheduled", 1);
         } catch (Exception error) {
@@ -77,8 +77,7 @@ final class AlarmScheduler {
                 future.put(item);
             }
             saveStored(context, future);
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) {}
     }
 
     static void removeStoredAlarm(Context context, int alarmId) {
@@ -120,6 +119,10 @@ final class AlarmScheduler {
         alarmIntent.putExtra("body", item.optString("body", "설정한 기상 시각입니다."));
         alarmIntent.putExtra("shiftType", item.optString("shiftType", "근무"));
         alarmIntent.putExtra("workDate", item.optString("workDate", ""));
+        alarmIntent.putExtra(
+            "alarmMode",
+            item.optString("alarmMode", AlarmSettingsStore.MODE_SOUND_VIBRATE)
+        );
 
         PendingIntent operation = PendingIntent.getBroadcast(
             context,
@@ -182,6 +185,10 @@ final class AlarmScheduler {
             normalized.put("body", item.optString("body", "설정한 기상 시각입니다."));
             normalized.put("shiftType", item.optString("shiftType", "근무"));
             normalized.put("workDate", item.optString("workDate", ""));
+            normalized.put(
+                "alarmMode",
+                item.optString("alarmMode", AlarmSettingsStore.MODE_SOUND_VIBRATE)
+            );
             return normalized;
         } catch (Exception error) {
             return null;
@@ -211,8 +218,7 @@ final class AlarmScheduler {
             result.put("ok", ok);
             result.put("code", code == null ? "" : code);
             result.put("count", count);
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) {}
         return result.toString();
     }
 }
