@@ -24,7 +24,9 @@ public class AlarmRingingService extends Service {
     static final String ACTION_START = "com.kangj.shiftcalendar.action.START_ALARM";
     static final String ACTION_STOP = "com.kangj.shiftcalendar.action.STOP_ALARM";
     private static final String CHANNEL_ID = "shift_alarm_channel_v2";
+    private static final String WATCH_CHANNEL_ID = "shift_alarm_watch_v1";
     private static final int NOTIFICATION_ID = 7001;
+    private static final int WATCH_NOTIFICATION_ID = 7005;
     private static final long MAX_RING_MILLIS = 10 * 60 * 1_000L;
 
     private MediaPlayer mediaPlayer;
@@ -49,6 +51,7 @@ public class AlarmRingingService extends Service {
         Intent source = intent == null ? new Intent() : intent;
         Notification notification = buildNotification(source);
         startForeground(NOTIFICATION_ID, notification);
+        postWatchBridgeNotification(source);
 
         String mode = source.getStringExtra("alarmMode");
         if (mode == null || mode.isEmpty()) {
@@ -133,6 +136,76 @@ public class AlarmRingingService extends Service {
         channel.enableVibration(false);
         channel.setSound(null, null);
         manager.createNotificationChannel(channel);
+
+        NotificationChannel watchChannel = new NotificationChannel(
+            WATCH_CHANNEL_ID,
+            "워치 알람 알림",
+            NotificationManager.IMPORTANCE_HIGH
+        );
+        watchChannel.setDescription("교대달력 알람을 워치로 전달합니다.");
+        watchChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        watchChannel.setSound(null, null);
+        watchChannel.enableVibration(true);
+        watchChannel.setVibrationPattern(new long[]{0, 500, 250, 500, 250});
+        manager.createNotificationChannel(watchChannel);
+    }
+
+    private void postWatchBridgeNotification(Intent source) {
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        if (manager == null) return;
+
+        String title = source.getStringExtra("title");
+        String body = source.getStringExtra("body");
+
+        Intent fullScreenIntent = new Intent(this, AlarmActivity.class);
+        fullScreenIntent.addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK |
+                Intent.FLAG_ACTIVITY_CLEAR_TOP |
+                Intent.FLAG_ACTIVITY_SINGLE_TOP
+        );
+        fullScreenIntent.putExtras(source);
+        PendingIntent contentIntent = PendingIntent.getActivity(
+            this,
+            7006,
+            fullScreenIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        Intent stopIntent = new Intent(this, AlarmActionReceiver.class);
+        stopIntent.setAction(ACTION_STOP);
+        PendingIntent stopPendingIntent = PendingIntent.getBroadcast(
+            this,
+            7007,
+            stopIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        Notification.Builder builder = Build.VERSION.SDK_INT >= 26
+            ? new Notification.Builder(this, WATCH_CHANNEL_ID)
+            : new Notification.Builder(this);
+
+        Notification notification = builder
+            .setSmallIcon(R.drawable.ic_alarm_notification)
+            .setContentTitle(title == null || title.isEmpty()
+                ? "교대달력 근무 알람" : title)
+            .setContentText(body == null || body.isEmpty()
+                ? "교대달력 알람이 울리고 있습니다." : body)
+            .setCategory(Notification.CATEGORY_ALARM)
+            .setPriority(Notification.PRIORITY_MAX)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
+            .setOngoing(false)
+            .setAutoCancel(true)
+            .setLocalOnly(false)
+            .setContentIntent(contentIntent)
+            .setVibrate(new long[]{0, 500, 250, 500, 250})
+            .addAction(new Notification.Action.Builder(
+                android.R.drawable.ic_menu_close_clear_cancel,
+                getString(R.string.stop_alarm),
+                stopPendingIntent
+            ).build())
+            .build();
+
+        manager.notify(WATCH_NOTIFICATION_ID, notification);
     }
 
     private void startRinging(String mode) {
@@ -148,27 +221,40 @@ public class AlarmRingingService extends Service {
     }
 
     private void startAlarmSound() {
-        try {
-            Uri alarmUri = android.media.RingtoneManager.getDefaultUri(
-                android.media.RingtoneManager.TYPE_ALARM
-            );
-            if (alarmUri == null) {
-                alarmUri = android.media.RingtoneManager.getDefaultUri(
-                    android.media.RingtoneManager.TYPE_NOTIFICATION
-                );
-            }
-            if (alarmUri == null) alarmUri = Settings.System.DEFAULT_ALARM_ALERT_URI;
+        String storedUri = AlarmSettingsStore.loadSoundUri(this);
+        if (storedUri != null && !storedUri.isEmpty()) {
+            try {
+                if (tryPlayAlarmSound(Uri.parse(storedUri))) return;
+            } catch (Exception ignored) {}
+        }
 
-            mediaPlayer = new MediaPlayer();
-            mediaPlayer.setAudioAttributes(new AudioAttributes.Builder()
+        Uri alarmUri = android.media.RingtoneManager.getDefaultUri(
+            android.media.RingtoneManager.TYPE_ALARM);
+        if (alarmUri == null) {
+            alarmUri = android.media.RingtoneManager.getDefaultUri(
+                android.media.RingtoneManager.TYPE_NOTIFICATION);
+        }
+        if (alarmUri == null) alarmUri = Settings.System.DEFAULT_ALARM_ALERT_URI;
+        tryPlayAlarmSound(alarmUri);
+    }
+
+    private boolean tryPlayAlarmSound(Uri alarmUri) {
+        if (alarmUri == null) return false;
+        try {
+            MediaPlayer player = new MediaPlayer();
+            player.setAudioAttributes(new AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_ALARM)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build());
-            mediaPlayer.setDataSource(this, alarmUri);
-            mediaPlayer.setLooping(true);
-            mediaPlayer.prepare();
-            mediaPlayer.start();
-        } catch (Exception ignored) {}
+            player.setDataSource(this, alarmUri);
+            player.setLooping(true);
+            player.prepare();
+            player.start();
+            mediaPlayer = player;
+            return true;
+        } catch (Exception error) {
+            return false;
+        }
     }
 
     private void startVibration() {
@@ -195,6 +281,9 @@ public class AlarmRingingService extends Service {
     }
 
     private void stopRinging() {
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        if (manager != null) manager.cancel(WATCH_NOTIFICATION_ID);
+
         if (mediaPlayer != null) {
             try {
                 if (mediaPlayer.isPlaying()) mediaPlayer.stop();

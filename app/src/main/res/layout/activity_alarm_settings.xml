@@ -49,6 +49,77 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginHorizontal="14dp"
+        android:layout_marginBottom="12dp"
+        android:orientation="vertical"
+        android:padding="14dp"
+        android:background="@drawable/bg_alarm_card">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="예약 상태"
+            android:textColor="#202428"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/alarmScheduleStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="예약된 알람 0개 · 권한/근무표 동기화/설정 확인"
+            android:textColor="#58636B"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="14dp"
+        android:layout_marginBottom="12dp"
+        android:orientation="vertical"
+        android:padding="14dp"
+        android:background="@drawable/bg_alarm_card">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="앱 업데이트"
+            android:textColor="#202428"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/appCurrentVersionText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="현재 버전"
+            android:textColor="#58636B"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/appLatestVersionText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="최신 버전 확인 전"
+            android:textColor="#58636B"
+            android:textSize="14sp" />
+
+        <Button
+            android:id="@+id/appUpdateButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="10dp"
+            android:text="업데이트 확인"
+            android:textAllCaps="false" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingHorizontal="14dp"
         android:paddingBottom="10dp">
@@ -60,6 +131,31 @@
             android:textColor="#202428"
             android:textSize="15sp"
             android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/alarmSoundName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="알람 소리 · 시스템 기본 알람음"
+            android:textColor="#58636B"
+            android:textSize="13sp" />
+
+        <Button
+            android:id="@+id/alarmSoundPickerButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="4dp"
+            android:text="시스템 알람음 선택"
+            android:textAllCaps="false" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="워치는 휴대폰 설정과 관계없이 알람 알림을 진동으로 전달합니다."
+            android:textColor="#68727A"
+            android:textSize="11sp" />
 
         <RadioGroup
             android:id="@+id/alarmModeGroup"

@@ -66,6 +66,7 @@ public class AndroidAlarmBridge {
             result.put("exactAlarmGranted", canScheduleExactAlarms());
             result.put("fullScreenGranted", canUseFullScreenIntent());
             result.put("scheduledCount", AlarmScheduler.getStoredFutureCount(activity));
+            result.put("nextAlarm", AlarmScheduler.getNextStoredAlarmSummary(activity));
         } catch (Exception ignored) {
         }
         return result.toString();

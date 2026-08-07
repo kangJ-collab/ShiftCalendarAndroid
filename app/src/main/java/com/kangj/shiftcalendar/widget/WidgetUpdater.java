@@ -11,6 +11,8 @@ public final class WidgetUpdater {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
         TodayWidgetProvider.update(context, manager,
             manager.getAppWidgetIds(new ComponentName(context, TodayWidgetProvider.class)));
+        CompactWidgetProvider.update(context, manager,
+            manager.getAppWidgetIds(new ComponentName(context, CompactWidgetProvider.class)));
         NextWidgetProvider.update(context, manager,
             manager.getAppWidgetIds(new ComponentName(context, NextWidgetProvider.class)));
         CalendarWidgetProvider.update(context, manager,

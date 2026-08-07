@@ -23,6 +23,7 @@ public final class AlarmSettingsStore {
     private static final String PREFS = "shiftcalendar_native";
     private static final String KEY = "multi_alarm_settings_v2";
     private static final String KEY_MODE = "alarm_mode_v1";
+    private static final String KEY_SOUND_URI = "alarm_sound_uri_v1";
     private static final DateTimeFormatter DATE = DateTimeFormatter.ISO_LOCAL_DATE;
 
     public static final String MODE_SOUND_VIBRATE = "sound_vibrate";
@@ -50,6 +51,18 @@ public final class AlarmSettingsStore {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit()
             .putString(KEY_MODE, safeMode)
+            .apply();
+    }
+
+    public static String loadSoundUri(Context context) {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_SOUND_URI, "");
+    }
+
+    public static void saveSoundUri(Context context, String uri) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_SOUND_URI, uri == null ? "" : uri)
             .apply();
     }
 
@@ -101,12 +114,27 @@ public final class AlarmSettingsStore {
         rescheduleAll(context);
     }
 
-    public static void rescheduleAll(Context context) {
+    public static String getPermissionBlockReason(Context context) {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            return "알림 권한 필요";
+        }
+
+        AlarmManager manager = context.getSystemService(AlarmManager.class);
+        if (Build.VERSION.SDK_INT >= 31 &&
+            (manager == null || !manager.canScheduleExactAlarms())) {
+            return "정확한 알람 권한 필요";
+        }
+        return "";
+    }
+
+    public static String rescheduleAll(Context context) {
         try {
-            if (Build.VERSION.SDK_INT >= 33 &&
-                context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return;
-            AlarmManager manager = context.getSystemService(AlarmManager.class);
-            if (Build.VERSION.SDK_INT >= 31 && (manager == null || !manager.canScheduleExactAlarms())) return;
+            String permissionBlockReason = getPermissionBlockReason(context);
+            if (!permissionBlockReason.isEmpty()) {
+                return AlarmScheduler.resultJson(false, permissionBlockReason, 0);
+            }
 
             Map<String, List<String>> settings = load(context);
             Map<String, String> schedule = ScheduleStore.asMap(context);
@@ -115,8 +143,11 @@ public final class AlarmSettingsStore {
             String mode = loadMode(context);
 
             for (Map.Entry<String, String> day : schedule.entrySet()) {
-                List<String> times = settings.get(day.getValue());
-                if (times == null) continue;
+                String shift = day.getValue() == null ? "" : day.getValue().trim();
+                if (isNonWorkingShift(shift)) continue;
+
+                List<String> times = resolveAlarmTimes(settings, shift);
+                if (times.isEmpty()) continue;
                 for (int index = 0; index < times.size(); index++) {
                     String time = times.get(index);
                     LocalDate date = LocalDate.parse(day.getKey(), DATE);
@@ -128,16 +159,51 @@ public final class AlarmSettingsStore {
                     JSONObject alarm = new JSONObject();
                     alarm.put("id", stableId(day.getKey() + "|" + day.getValue() + "|" + time + "|" + index));
                     alarm.put("triggerAt", trigger);
-                    alarm.put("title", "교대달력 · " + day.getValue());
+                    alarm.put("title", "교대달력 · " + shift);
                     alarm.put("body", day.getKey() + " " + time + " 기상 알람입니다.");
-                    alarm.put("shiftType", day.getValue());
+                    alarm.put("shiftType", shift);
                     alarm.put("workDate", day.getKey());
                     alarm.put("alarmMode", mode);
                     alarms.put(alarm);
                 }
             }
-            AlarmScheduler.replaceAlarms(context, alarms.toString());
-        } catch (Exception ignored) {}
+            return AlarmScheduler.replaceAlarms(context, alarms.toString());
+        } catch (Exception error) {
+            return AlarmScheduler.resultJson(
+                false,
+                error.getMessage() == null ? "schedule_failed" : error.getMessage(),
+                0);
+        }
+    }
+
+    private static List<String> resolveAlarmTimes(
+        Map<String, List<String>> settings, String shift) {
+        List<String> specific = settings.get(shift);
+        if (specific != null && !specific.isEmpty()) return specific;
+
+        String fallbackKey = isNightShift(shift) ? "야간" : "주간";
+        List<String> fallback = settings.get(fallbackKey);
+        return fallback == null ? new ArrayList<>() : fallback;
+    }
+
+    private static boolean isNightShift(String shift) {
+        return shift.contains("야") || shift.contains("야간") || shift.contains("밤");
+    }
+
+    private static boolean isNonWorkingShift(String shift) {
+        if (shift.isEmpty() || isActualWorkShift(shift)) return shift.isEmpty();
+        return shift.equals("휴무") || shift.equals("휴") ||
+            shift.contains("연차") || shift.contains("휴가") ||
+            shift.contains("공가") || shift.contains("병가") ||
+            shift.contains("경조") || shift.contains("대체휴무") ||
+            shift.contains("공휴휴가");
+    }
+
+    private static boolean isActualWorkShift(String shift) {
+        return shift.contains("OT") || shift.contains("일근") ||
+            shift.contains("주간") || shift.contains("야간") ||
+            shift.contains("교육") || shift.contains("출장") ||
+            shift.contains("호출");
     }
 
     private static int stableId(String value) {
