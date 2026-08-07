@@ -28,6 +28,7 @@ public class MainActivity extends Activity {
     private WebView webView;
     private ValueCallback<Uri[]> fileChooserCallback;
     private boolean fallbackLoaded;
+    private UpdateManager updateManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,6 +42,9 @@ public class MainActivity extends Activity {
             configureWebView();
             webView.addJavascriptInterface(new AndroidAlarmBridge(this), "AndroidAlarm");
             webView.loadUrl(ONLINE_URL);
+
+            updateManager = new UpdateManager(this);
+            updateManager.checkForUpdate();
         } catch (Throwable error) {
             Toast.makeText(this, "교대달력을 시작하지 못했습니다.", Toast.LENGTH_LONG).show();
             finish();
@@ -220,6 +224,9 @@ public class MainActivity extends Activity {
             webView.postDelayed(this::syncScheduleFromWeb, 400);
             webView.postDelayed(this::notifyPermissionStateChanged, 600);
         }
+        if (updateManager != null) {
+            webView.postDelayed(updateManager::resumePendingInstall, 800);
+        }
     }
 
     @Override
@@ -245,6 +252,10 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (updateManager != null) {
+            updateManager.destroy();
+            updateManager = null;
+        }
         if (webView != null) {
             webView.removeJavascriptInterface("AndroidAlarm");
             webView.destroy();
