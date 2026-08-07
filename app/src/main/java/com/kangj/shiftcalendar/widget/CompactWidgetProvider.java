@@ -1,6 +1,6 @@
 package com.kangj.shiftcalendar.widget;
 
-import android.app.AppWidgetManager;
+import android.appwidget.AppWidgetManager;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
