@@ -16,13 +16,18 @@ import com.kangj.shiftcalendar.ScheduleStore;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.HashMap;
 import java.util.Map;
 
 public class CalendarWidgetProvider extends AppWidgetProvider {
     @Override public void onUpdate(Context c, AppWidgetManager m, int[] ids) { update(c,m,ids); }
 
     public static void update(Context context, AppWidgetManager manager, int[] ids) {
-        Map<String,String> schedule = ScheduleStore.asMap(context);
+        Map<String, ScheduleStore.ScheduleEntry> schedule = new HashMap<>();
+        for (int day = 1; day <= YearMonth.now().lengthOfMonth(); day++) {
+            LocalDate date = YearMonth.now().atDay(day);
+            schedule.put(date.toString(), ScheduleStore.getEntry(context, date.toString()));
+        }
         for (int id : ids) {
             RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_calendar);
             views.setImageViewBitmap(R.id.widgetCalendarImage, drawCalendar(context, schedule));
@@ -31,7 +36,8 @@ public class CalendarWidgetProvider extends AppWidgetProvider {
         }
     }
 
-    private static Bitmap drawCalendar(Context context, Map<String,String> schedule) {
+    private static Bitmap drawCalendar(
+        Context context, Map<String, ScheduleStore.ScheduleEntry> schedule) {
         float density = context.getResources().getDisplayMetrics().density;
         int width = Math.max(760, (int)(360*density));
         int height = Math.max(760, (int)(360*density));
@@ -79,11 +85,22 @@ public class CalendarWidgetProvider extends AppWidgetProvider {
             paint.setColor(col==0?Color.rgb(229,53,43):(col==6?Color.rgb(34,85,204):Color.rgb(32,36,40)));
             canvas.drawText(String.valueOf(day), x+cellW*0.12f, y-cellH*0.38f, paint);
 
-            String shift = schedule.getOrDefault(date.toString(), "");
+            ScheduleStore.ScheduleEntry entry =
+                schedule.getOrDefault(date.toString(),
+                    new ScheduleStore.ScheduleEntry(date.toString(), "", "", "", ""));
             paint.setTypeface(Typeface.DEFAULT);
             paint.setTextSize(width*0.024f);
-            paint.setColor(shiftColor(shift));
-            String shortShift = shorten(shift);
+            String shortShift = shorten(entry.label);
+            if (!entry.shift.isEmpty()) {
+                int bg = WidgetStyle.background(entry, 0xff53778c);
+                canvas.drawRoundRect(
+                    x + cellW * 0.06f, y - cellH * 0.25f,
+                    x + cellW * 0.94f, y + cellH * 0.12f,
+                    6, 6, paintFor(bg));
+                paint.setColor(WidgetStyle.text(entry, 0xffffffff));
+            } else {
+                paint.setColor(0xff53778c);
+            }
             canvas.drawText(shortShift, x+cellW*0.10f, y, paint);
         }
         return bitmap;
@@ -97,11 +114,9 @@ public class CalendarWidgetProvider extends AppWidgetProvider {
         return shift.substring(0, Math.min(3, shift.length()));
     }
 
-    private static int shiftColor(String shift) {
-        if (shift == null) return Color.GRAY;
-        if (shift.contains("야")) return Color.rgb(47,83,104);
-        if (shift.contains("주")) return Color.rgb(53,107,87);
-        if (shift.contains("휴") || shift.contains("연차")) return Color.rgb(217,72,65);
-        return Color.rgb(83,119,140);
+    private static Paint paintFor(int color) {
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setColor(color);
+        return paint;
     }
 }

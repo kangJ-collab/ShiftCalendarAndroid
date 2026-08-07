@@ -6,10 +6,12 @@
     <string name="stop_alarm">알람 끄기</string>
 
     <string name="widget_today_name">오늘 근무 · 2×2</string>
+    <string name="widget_compact_name">오늘 근무 · 1×1</string>
     <string name="widget_next_name">오늘·내일 근무 · 4×2</string>
     <string name="widget_calendar_name">월간 근무달력 · 4×4</string>
 
     <string name="widget_today_description">오늘 근무를 표시하는 2×2 위젯입니다.</string>
+    <string name="widget_compact_description">오늘 근무를 표시하는 1×1 위젯입니다.</string>
     <string name="widget_next_description">오늘과 내일 근무를 표시하는 4×2 위젯입니다.</string>
     <string name="widget_calendar_description">현재 월의 근무 달력을 표시하는 4×4 위젯입니다.</string>
 </resources>

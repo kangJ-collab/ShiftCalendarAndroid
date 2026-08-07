@@ -17,6 +17,23 @@ public final class ScheduleStore {
 
     private ScheduleStore() {}
 
+    public static final class ScheduleEntry {
+        public final String date;
+        public final String shift;
+        public final String label;
+        public final String backgroundColor;
+        public final String textColor;
+
+        public ScheduleEntry(String date, String shift, String label,
+                             String backgroundColor, String textColor) {
+            this.date = date == null ? "" : date;
+            this.shift = shift == null ? "" : shift;
+            this.label = label == null || label.isEmpty() ? this.shift : label;
+            this.backgroundColor = backgroundColor == null ? "" : backgroundColor;
+            this.textColor = textColor == null ? "" : textColor;
+        }
+    }
+
     public static void saveSchedule(Context context, String json) throws Exception {
         JSONArray array = new JSONArray(json == null ? "[]" : json);
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -41,6 +58,23 @@ public final class ScheduleStore {
             if (!date.isEmpty()) map.put(date, shift);
         }
         return map;
+    }
+
+    public static ScheduleEntry getEntry(Context context, String date) {
+        JSONArray array = getSchedule(context);
+        for (int i = 0; i < array.length(); i++) {
+            JSONObject item = array.optJSONObject(i);
+            if (item == null || !date.equals(item.optString("date", ""))) continue;
+            String shift = item.optString("shift", "");
+            return new ScheduleEntry(
+                date,
+                shift,
+                item.optString("label", shift),
+                item.optString("bg", ""),
+                item.optString("color", "")
+            );
+        }
+        return new ScheduleEntry(date, "", "", "", "");
     }
 
     public static List<String> discoveredShiftTypes(Context context) {

@@ -10,6 +10,11 @@ import android.os.Build;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+
 final class AlarmScheduler {
     private static final String PREFS = "shift_alarm_native";
     private static final String KEY_ALARMS = "scheduled_alarms";
@@ -100,6 +105,31 @@ final class AlarmScheduler {
             if (item != null && item.optLong("triggerAt", 0) > now) count++;
         }
         return count;
+    }
+
+    static String getNextStoredAlarmSummary(Context context) {
+        JSONArray stored = getStored(context);
+        long now = System.currentTimeMillis();
+        JSONObject next = null;
+        long nextTrigger = Long.MAX_VALUE;
+
+        for (int index = 0; index < stored.length(); index++) {
+            JSONObject item = stored.optJSONObject(index);
+            if (item == null) continue;
+            long trigger = item.optLong("triggerAt", 0);
+            if (trigger > now && trigger < nextTrigger) {
+                next = item;
+                nextTrigger = trigger;
+            }
+        }
+
+        if (next == null) return "없음";
+
+        ZonedDateTime dateTime = Instant.ofEpochMilli(nextTrigger)
+            .atZone(ZoneId.systemDefault());
+        String date = DateTimeFormatter.ofPattern("MM-dd HH:mm")
+            .format(dateTime);
+        return date + " · " + next.optString("shiftType", "근무");
     }
 
     private static void scheduleOne(Context context, JSONObject item) throws Exception {
