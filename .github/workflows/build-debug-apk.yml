@@ -5,10 +5,12 @@ on:
   push:
     branches: [ main ]
   schedule:
-    # GitHub Actions uses UTC. 30분마다 최신 웹 저장소를 다시 받아 APK를 만듭니다.
     - cron: '7,37 * * * *'
   repository_dispatch:
     types: [shiftcalendar-web-updated]
+
+permissions:
+  contents: write
 
 concurrency:
   group: shiftcalendar-android-build
@@ -17,6 +19,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_SIGNING_PASSWORD: ${{ secrets.ANDROID_SIGNING_PASSWORD }}
 
     steps:
       - name: Checkout Android project
@@ -66,18 +70,78 @@ jobs:
         with:
           gradle-version: '9.5.0'
 
-      - name: Build debug APK
-        run: gradle :app:assembleDebug --stacktrace
-
-      - name: Rename APK
+      - name: Read app version
+        id: version
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk \
-            app/build/outputs/apk/debug/ShiftCalendarAndroid-v1.2.1-debug.apk
+          set -euo pipefail
+          VERSION_NAME="$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" app/build.gradle | head -n1)"
+          test -n "$VERSION_NAME"
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "apk_name=ShiftCalendarAndroid-v$VERSION_NAME.apk" >> "$GITHUB_OUTPUT"
 
-      - name: Upload APK
+      - name: Check signing secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${ANDROID_SIGNING_PASSWORD:-}" ]; then
+            echo "::error::Repository secret ANDROID_SIGNING_PASSWORD is missing."
+            exit 1
+          fi
+
+      - name: Build unsigned release APK
+        run: gradle :app:assembleRelease --stacktrace
+
+      - name: Restore signing keystore
+        shell: bash
+        run: |
+          set -euo pipefail
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -a \
+            -in signing/shiftcalendar-release.jks.enc \
+            -out "$RUNNER_TEMP/shiftcalendar-release.jks" \
+            -pass env:ANDROID_SIGNING_PASSWORD
+
+      - name: Sign release APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK_NAME="${{ steps.version.outputs.apk_name }}"
+          UNSIGNED="app/build/outputs/apk/release/app-release-unsigned.apk"
+          SIGNED="app/build/outputs/apk/release/$APK_NAME"
+          test -f "$UNSIGNED"
+
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign \
+            --ks "$RUNNER_TEMP/shiftcalendar-release.jks" \
+            --ks-key-alias shiftcalendar \
+            --ks-pass env:ANDROID_SIGNING_PASSWORD \
+            --key-pass env:ANDROID_SIGNING_PASSWORD \
+            --out "$SIGNED" \
+            "$UNSIGNED"
+
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$SIGNED"
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ShiftCalendarAndroid-v1.2.1
-          path: app/build/outputs/apk/debug/ShiftCalendarAndroid-v1.2.1-debug.apk
+          name: ShiftCalendarAndroid-v${{ steps.version.outputs.version_name }}
+          path: app/build/outputs/apk/release/${{ steps.version.outputs.apk_name }}
           retention-days: 30
+
+      - name: Publish auto-update release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.version.outputs.tag }}"
+          APK="app/build/outputs/apk/release/${{ steps.version.outputs.apk_name }}"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$APK" --clobber
+          else
+            gh release create "$TAG" "$APK" \
+              --title "ShiftCalendarAndroid $TAG" \
+              --notes "교대달력 Android 자동 업데이트 배포본" \
+              --latest
+          fi
