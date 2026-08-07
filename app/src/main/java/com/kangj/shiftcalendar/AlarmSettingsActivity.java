@@ -40,6 +40,10 @@ public class AlarmSettingsActivity extends Activity {
     private TextView scheduleStatusText;
     private TextView alarmSoundName;
 
+    private TextView scheduleSummary;
+    private TextView updateSummary;
+    private TextView modeSummary;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -55,8 +59,28 @@ public class AlarmSettingsActivity extends Activity {
         scheduleStatusText = findViewById(R.id.alarmScheduleStatus);
         alarmSoundName = findViewById(R.id.alarmSoundName);
 
+        scheduleSummary = findViewById(R.id.alarmScheduleSummary);
+        updateSummary = findViewById(R.id.updateSummary);
+        modeSummary = findViewById(R.id.modeSummary);
+
         values.putAll(AlarmSettingsStore.load(this));
         restoreMode();
+
+        setupAccordion(
+            R.id.scheduleAccordionHeader,
+            R.id.scheduleAccordionContent,
+            R.id.scheduleAccordionArrow
+        );
+        setupAccordion(
+            R.id.updateAccordionHeader,
+            R.id.updateAccordionContent,
+            R.id.updateAccordionArrow
+        );
+        setupAccordion(
+            R.id.modeAccordionHeader,
+            R.id.modeAccordionContent,
+            R.id.modeAccordionArrow
+        );
 
         findViewById(R.id.alarmPermissionButton)
             .setOnClickListener(v -> requestRequiredPermissions());
@@ -84,8 +108,24 @@ public class AlarmSettingsActivity extends Activity {
 
         render();
         renderSoundSelection();
+        refreshModeSummary();
         refreshScheduleStatus();
         refreshVersionInfo(false);
+    }
+
+    private void setupAccordion(int headerId, int contentId, int arrowId) {
+        View header = findViewById(headerId);
+        View content = findViewById(contentId);
+        TextView arrow = findViewById(arrowId);
+
+        content.setVisibility(View.GONE);
+        arrow.setText("⌄");
+
+        header.setOnClickListener(v -> {
+            boolean opening = content.getVisibility() != View.VISIBLE;
+            content.setVisibility(opening ? View.VISIBLE : View.GONE);
+            arrow.setText(opening ? "⌃" : "⌄");
+        });
     }
 
     private void refreshVersionInfo(boolean userRequested) {
@@ -94,6 +134,9 @@ public class AlarmSettingsActivity extends Activity {
         updateButton.setEnabled(false);
         updateButton.setText("확인 중...");
         latestVersionText.setText("최신 버전 확인 중...");
+        if (updateSummary != null) {
+            updateSummary.setText("버전 확인 중...");
+        }
 
         updateManager.checkForUpdate(info -> {
             currentVersionText.setText(
@@ -104,6 +147,10 @@ public class AlarmSettingsActivity extends Activity {
                     "최신 버전 확인 실패 · " + info.errorMessage);
                 updateButton.setText("다시 확인");
                 updateButton.setEnabled(true);
+
+                if (updateSummary != null) {
+                    updateSummary.setText("업데이트 확인 실패");
+                }
 
                 if (userRequested) {
                     Toast.makeText(
@@ -121,12 +168,23 @@ public class AlarmSettingsActivity extends Activity {
                 updateButton.setText(
                     "v" + info.latestVersion + " 업데이트");
                 updateButton.setEnabled(true);
+
+                if (updateSummary != null) {
+                    updateSummary.setText(
+                        "v" + info.currentVersion +
+                        " → v" + info.latestVersion);
+                }
             } else {
                 latestVersionText.setText(
                     "최신 버전  v" + info.latestVersion +
                     " · 최신입니다");
                 updateButton.setText("업데이트 확인");
                 updateButton.setEnabled(true);
+
+                if (updateSummary != null) {
+                    updateSummary.setText(
+                        "v" + info.currentVersion + " · 최신");
+                }
 
                 if (userRequested) {
                     Toast.makeText(
@@ -312,6 +370,8 @@ public class AlarmSettingsActivity extends Activity {
         AlarmSettingsStore.save(this, values);
         com.kangj.shiftcalendar.widget.WidgetUpdater.updateAll(this);
         refreshScheduleStatus();
+        renderSoundSelection();
+        refreshModeSummary();
 
         Toast.makeText(
             this,
@@ -373,22 +433,44 @@ public class AlarmSettingsActivity extends Activity {
         if (scheduleStatusText == null) return;
 
         int count = AlarmScheduler.getStoredFutureCount(this);
-        String permissionReason = AlarmSettingsStore.getPermissionBlockReason(this);
+        String permissionReason =
+            AlarmSettingsStore.getPermissionBlockReason(this);
+
         if (!permissionReason.isEmpty()) {
             scheduleStatusText.setText(
-                "예약된 알람 " + count + "개 · " + permissionReason);
+                "앞으로 예약된 기상 알람 " + count + "회\n" +
+                permissionReason);
+
+            if (scheduleSummary != null) {
+                scheduleSummary.setText(
+                    "총 " + count + "회 · " + permissionReason);
+            }
             return;
         }
 
         if (count == 0) {
             scheduleStatusText.setText(
-                "예약된 알람 0개 · 권한/근무표 동기화/설정 확인");
+                "앞으로 예약된 기상 알람 0회\n" +
+                "권한/근무표 동기화/설정을 확인하세요.");
+
+            if (scheduleSummary != null) {
+                scheduleSummary.setText(
+                    "예약 없음 · 설정을 확인하세요");
+            }
             return;
         }
 
+        String next =
+            AlarmScheduler.getNextStoredAlarmSummary(this);
+
         scheduleStatusText.setText(
-            "예약된 알람 " + count + "개 · 다음 알람 " +
-            AlarmScheduler.getNextStoredAlarmSummary(this));
+            "앞으로 예약된 기상 알람 " + count + "회\n" +
+            "다음 알람 " + next);
+
+        if (scheduleSummary != null) {
+            scheduleSummary.setText(
+                "다음 " + next + " · 총 " + count + "회");
+        }
     }
 
     private void renderSoundSelection() {
@@ -396,30 +478,76 @@ public class AlarmSettingsActivity extends Activity {
 
         String uriValue = AlarmSettingsStore.loadSoundUri(this);
         if (uriValue == null || uriValue.isEmpty()) {
-            alarmSoundName.setText("알람 소리 · 시스템 기본 알람음");
+            alarmSoundName.setText(
+                "알람 소리 · 시스템 기본 알람음");
+            refreshModeSummary();
             return;
         }
 
         try {
             Ringtone ringtone = RingtoneManager.getRingtone(
                 this, Uri.parse(uriValue));
-            String title = ringtone == null ? "선택한 알람음" : ringtone.getTitle(this);
-            alarmSoundName.setText("알람 소리 · " +
-                (title == null || title.isEmpty() ? "선택한 알람음" : title));
+            String title =
+                ringtone == null
+                    ? "선택한 알람음"
+                    : ringtone.getTitle(this);
+
+            alarmSoundName.setText(
+                "알람 소리 · " +
+                (title == null || title.isEmpty()
+                    ? "선택한 알람음"
+                    : title));
         } catch (Exception ignored) {
-            alarmSoundName.setText("알람 소리 · 선택한 알람음");
+            alarmSoundName.setText(
+                "알람 소리 · 선택한 알람음");
         }
+
+        refreshModeSummary();
+    }
+
+    private void refreshModeSummary() {
+        if (modeSummary == null) return;
+
+        String mode = AlarmSettingsStore.loadMode(this);
+
+        String modeLabel =
+            AlarmSettingsStore.MODE_SOUND.equals(mode)
+                ? "소리만"
+                : AlarmSettingsStore.MODE_VIBRATE.equals(mode)
+                    ? "진동만"
+                    : "소리+진동";
+
+        String sound =
+            alarmSoundName == null
+                ? "시스템 기본 알람음"
+                : alarmSoundName.getText()
+                    .toString()
+                    .replace("알람 소리 · ", "");
+
+        modeSummary.setText(
+            modeLabel + " · " + sound);
     }
 
     private void openAlarmSoundPicker() {
-        Intent intent = new Intent(RingtoneManager.ACTION_RINGTONE_PICKER);
+        Intent intent =
+            new Intent(
+                RingtoneManager.ACTION_RINGTONE_PICKER);
+
         intent.putExtra(
             RingtoneManager.EXTRA_RINGTONE_TYPE,
             RingtoneManager.TYPE_ALARM);
-        intent.putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true);
-        intent.putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false);
 
-        String existing = AlarmSettingsStore.loadSoundUri(this);
+        intent.putExtra(
+            RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT,
+            true);
+
+        intent.putExtra(
+            RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT,
+            false);
+
+        String existing =
+            AlarmSettingsStore.loadSoundUri(this);
+
         if (existing != null && !existing.isEmpty()) {
             intent.putExtra(
                 RingtoneManager.EXTRA_RINGTONE_EXISTING_URI,
@@ -427,22 +555,44 @@ public class AlarmSettingsActivity extends Activity {
         }
 
         try {
-            startActivityForResult(intent, RINGTONE_PICKER_REQUEST);
+            startActivityForResult(
+                intent,
+                RINGTONE_PICKER_REQUEST);
         } catch (Exception error) {
             Toast.makeText(
-                this, "시스템 알람음 선택기를 열 수 없습니다.", Toast.LENGTH_SHORT).show();
+                this,
+                "시스템 알람음 선택기를 열 수 없습니다.",
+                Toast.LENGTH_SHORT).show();
         }
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode != RINGTONE_PICKER_REQUEST ||
-            resultCode != RESULT_OK || data == null) return;
+    protected void onActivityResult(
+        int requestCode,
+        int resultCode,
+        Intent data) {
 
-        Uri uri = data.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI);
-        AlarmSettingsStore.saveSoundUri(this, uri == null ? "" : uri.toString());
+        super.onActivityResult(
+            requestCode,
+            resultCode,
+            data);
+
+        if (requestCode != RINGTONE_PICKER_REQUEST ||
+            resultCode != RESULT_OK ||
+            data == null) {
+            return;
+        }
+
+        Uri uri =
+            data.getParcelableExtra(
+                RingtoneManager.EXTRA_RINGTONE_PICKED_URI);
+
+        AlarmSettingsStore.saveSoundUri(
+            this,
+            uri == null ? "" : uri.toString());
+
         renderSoundSelection();
+        refreshModeSummary();
     }
 
     @Override
@@ -451,6 +601,8 @@ public class AlarmSettingsActivity extends Activity {
 
         AlarmSettingsStore.rescheduleAll(this);
         refreshScheduleStatus();
+        renderSoundSelection();
+        refreshModeSummary();
 
         if (updateManager != null) {
             updateManager.resumePendingInstall();
@@ -468,6 +620,9 @@ public class AlarmSettingsActivity extends Activity {
 
     private int dp(int value) {
         return Math.round(
-            value * getResources().getDisplayMetrics().density);
+            value *
+            getResources()
+                .getDisplayMetrics()
+                .density);
     }
 }
