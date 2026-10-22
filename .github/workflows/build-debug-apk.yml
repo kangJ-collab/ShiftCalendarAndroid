@@ -14,7 +14,7 @@ permissions:
 
 concurrency:
   group: shiftcalendar-android-build
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -27,6 +27,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download latest shiftcalendar web app
+        id: web
         shell: bash
         run: |
           set -euo pipefail
@@ -35,6 +36,7 @@ jobs:
 
           SOURCE_SHA="$(git -C /tmp/shiftcalendar-web rev-parse HEAD)"
           echo "Latest web source: $SOURCE_SHA"
+          echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
 
           rm -rf app/src/main/assets/www
           mkdir -p app/src/main/assets/www
@@ -50,40 +52,44 @@ jobs:
           printf '%s\n' "$SOURCE_SHA" > app/src/main/assets/www/.source-commit
           test -f app/src/main/assets/www/index.html
 
+      - name: Test release version selection
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
+
+      - name: Prepare release version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WEB_SOURCE_SHA: ${{ steps.web.outputs.source_sha }}
+        run: python3 scripts/prepare_release.py
+
       - name: Set up Java 17
+        if: steps.version.outputs.should_build == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Set up Android SDK
+        if: steps.version.outputs.should_build == 'true'
         uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools'
 
       - name: Install Android SDK packages
+        if: steps.version.outputs.should_build == 'true'
         shell: bash
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
       - name: Set up Gradle
+        if: steps.version.outputs.should_build == 'true'
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
 
-      - name: Read app version
-        id: version
-        shell: bash
-        run: |
-          set -euo pipefail
-          VERSION_NAME="$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" app/build.gradle | head -n1)"
-          test -n "$VERSION_NAME"
-          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
-          echo "tag=v$VERSION_NAME" >> "$GITHUB_OUTPUT"
-          echo "apk_name=ShiftCalendarAndroid-v$VERSION_NAME.apk" >> "$GITHUB_OUTPUT"
-
       - name: Check signing secret
+        if: steps.version.outputs.should_build == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -93,9 +99,11 @@ jobs:
           fi
 
       - name: Build unsigned release APK
+        if: steps.version.outputs.should_build == 'true'
         run: gradle :app:assembleRelease --stacktrace
 
       - name: Restore signing keystore
+        if: steps.version.outputs.should_build == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -105,6 +113,7 @@ jobs:
             -pass env:ANDROID_SIGNING_PASSWORD
 
       - name: Sign release APK
+        if: steps.version.outputs.should_build == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -124,6 +133,7 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$SIGNED"
 
       - name: Upload APK artifact
+        if: steps.version.outputs.should_build == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ShiftCalendarAndroid-v${{ steps.version.outputs.version_name }}
@@ -131,6 +141,7 @@ jobs:
           retention-days: 30
 
       - name: Publish auto-update release
+        if: steps.version.outputs.should_build == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -139,11 +150,8 @@ jobs:
           TAG="${{ steps.version.outputs.tag }}"
           APK="app/build/outputs/apk/release/${{ steps.version.outputs.apk_name }}"
 
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$APK" --clobber
-          else
-            gh release create "$TAG" "$APK" \
-              --title "ShiftCalendarAndroid $TAG" \
-              --notes "교대달력 Android 자동 업데이트 배포본" \
-              --latest
-          fi
+          gh release create "$TAG" "$APK" release-manifest.json \
+            --target "${{ github.sha }}" \
+            --title "ShiftCalendarAndroid $TAG" \
+            --notes "교대달력 Android 업데이트" \
+            --latest
